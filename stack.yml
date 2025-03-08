@@ -1,11 +1,17 @@
 services:
-  doc2md:
-    image: felipefontoura/doc2md:latest
+  leitor_doc_pyzerox:
+    image: andersonlemes/leitor_doc_pyzerox:latest
     networks:
       - network_public
     environment:
+      # Seleção do provedor de IA: openai, gemini, anthropic, deepseek, grok, llama_local
+      - AI_PROVIDER=openai
+      
+      # Configurações da OpenAI (padrão)
       - OPENAI_API_KEY=sk-xxx
-      - LLM_MODEL=gpt-4o-mini
+      - OPENAI_MODEL=gpt-4o-mini
+      
+      # Configurações gerais
       - WORKERS=4 # (2 x num_cores) + 1
       - TIMEOUT=0
     deploy:
@@ -20,13 +26,13 @@ services:
           memory: 760M
       labels:
         - traefik.enable=true
-        - traefik.http.routers.doc2md.rule=Host(`api.doc2md.website.com`)
-        - traefik.http.routers.doc2md.entrypoints=websecure
-        - traefik.http.routers.doc2md.tls.certresolver=letsencryptresolver
-        - traefik.http.routers.doc2md.priority=1
-        - traefik.http.routers.doc2md.service=doc2md
-        - traefik.http.services.doc2md.loadbalancer.server.port=5000
-        - traefik.http.services.doc2md.loadbalancer.passHostHeader=true
+        - traefik.http.routers.leitor_doc_pyzerox.rule=Host(`api.doc2md.website.com`)
+        - traefik.http.routers.leitor_doc_pyzerox.entrypoints=websecure
+        - traefik.http.routers.leitor_doc_pyzerox.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.leitor_doc_pyzerox.priority=1
+        - traefik.http.routers.leitor_doc_pyzerox.service=leitor_doc_pyzerox
+        - traefik.http.services.leitor_doc_pyzerox.loadbalancer.server.port=5000
+        - traefik.http.services.leitor_doc_pyzerox.loadbalancer.passHostHeader=true
 networks:
   network_public:
     name: network_public

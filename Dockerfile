@@ -8,7 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
   FLASK_APP=main.py \
   FLASK_ENV=production \
   WORKERS=4 \
-  TIMEOUT=120
+  TIMEOUT=120 \
+  AI_PROVIDER=openai
 
 # Install system dependencies
 RUN apt-get update \
@@ -17,20 +18,46 @@ RUN apt-get update \
   poppler-utils\
   graphicsmagick \
   ghostscript \
+  build-essential \
+  git \
+  cmake \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
+
+# Create directories
+RUN mkdir -p uploads models && chmod 777 uploads models
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
 # Install Python dependencies and gunicorn
+# Força a instalação das dependências principais sem as opcionais
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Argumento para instalar dependências para modelos específicos
+ARG INSTALL_LLAMA=false
+ARG CUDA_VERSION=none
+
+# Instalar llama-cpp-python se necessário com suporte a CUDA (opcional)
+RUN if [ "$INSTALL_LLAMA" = "true" ] && [ "$CUDA_VERSION" != "none" ]; then \
+    CMAKE_ARGS="-DLLAMA_CUBLAS=on" FORCE_CMAKE=1 pip install --no-cache-dir llama-cpp-python; \
+  elif [ "$INSTALL_LLAMA" = "true" ]; then \
+    pip install --no-cache-dir llama-cpp-python; \
+  fi
+
+# Argumentos para instalar bibliotecas específicas de cada provedor
+ARG INSTALL_ANTHROPIC=true
+ARG INSTALL_GEMINI=true
+ARG INSTALL_DEEPSEEK=true
+ARG INSTALL_GROK=false
+
+# Instala bibliotecas adicionais conforme necessário
+RUN if [ "$INSTALL_ANTHROPIC" = "true" ]; then pip install --no-cache-dir anthropic>=0.8.0; fi && \
+    if [ "$INSTALL_GEMINI" = "true" ]; then pip install --no-cache-dir google-generativeai>=0.3.0; fi && \
+    if [ "$INSTALL_DEEPSEEK" = "true" ]; then pip install --no-cache-dir deepseek; fi
 
 # Copy the rest of the application
 COPY . .
-
-# Create uploads directory
-RUN mkdir -p uploads && chmod 777 uploads
 
 # Create a non-root user
 RUN useradd -m appuser && chown -R appuser:appuser /app

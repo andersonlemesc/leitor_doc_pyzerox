@@ -11,6 +11,9 @@ from markitdown import MarkItDown
 from openai import OpenAI
 from pyzerox import zerox
 
+# Importações locais
+from ai_providers import AIProvider
+
 # Define supported file types and their MIME types
 SUPPORTED_FORMATS = {
     "pdf": ["application/pdf"],
@@ -98,6 +101,7 @@ def convert():
 
     Query Parameters:
         ocr (bool): Whether to use OCR processing for PDFs (default: True)
+        ai_provider (str): AI provider to use (openai, gemini, anthropic, deepseek, grok, llama_local)
     """
     try:
         # Get the binary data and content type
@@ -127,7 +131,25 @@ def convert():
             f.write(file_data)
 
         try:
-            model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+            # Get AI provider from query parameter or environment
+            ai_provider = request.args.get("ai_provider") or os.getenv("AI_PROVIDER", "openai")
+            
+            # Configurar os modelos específicos para cada provedor com base em variáveis de ambiente
+            if ai_provider == "openai":
+                model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+            elif ai_provider == "gemini":
+                model = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
+            elif ai_provider == "anthropic":
+                model = os.getenv("ANTHROPIC_MODEL", "claude-3-sonnet-20240229")
+            elif ai_provider == "deepseek":
+                model = os.getenv("DEEPSEEK_MODEL", "deepseek-vl")
+            elif ai_provider == "grok":
+                model = os.getenv("GROK_MODEL", "grok-2")
+            elif ai_provider == "llama_local":
+                model = "local_model"  # Modelo é definido pelo caminho do arquivo no LlamaProvider
+            else:
+                model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+                
             format_prompt = get_format_specific_prompt(format_type)
 
             # Process PDF with OCR
@@ -145,6 +167,7 @@ def convert():
                         custom_system_prompt=format_prompt,
                         cleanup=True,
                         concurrency=3,
+                        ai_provider=ai_provider,  # Pass the AI provider to zerox
                     )
                 )
 
@@ -152,14 +175,32 @@ def convert():
                 if hasattr(result, "pages") and result.pages:
                     content = "\n\n".join(page.content for page in result.pages)
 
-                return jsonify({"content": content, "format": format_type, "ocr": True})
+                return jsonify({"content": content, "format": format_type, "ocr": True, "ai_provider": ai_provider})
 
             # Process other formats using MarkItDown
-            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-            md = MarkItDown(llm_client=client, llm_model=model)
-            result = md.convert(temp_path, llm_prompt=format_prompt)
-
-            return jsonify({"content": result.text_content, "format": format_type})
+            # Inicializar o provedor de IA correto
+            try:
+                ai_provider_instance = AIProvider.get_provider(ai_provider)
+                
+                # Para compatibilidade, se estiver usando OpenAI, continue usando o cliente existente
+                if ai_provider == "openai":
+                    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+                    md = MarkItDown(llm_client=client, llm_model=model)
+                else:
+                    # Para outros provedores, passe o provedor de IA para o MarkItDown
+                    # Nota: Isso exigiria modificar o MarkItDown para aceitar provedores personalizados
+                    # Como isso não é possível sem modificar a biblioteca, usamos OpenAI como fallback
+                    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+                    md = MarkItDown(llm_client=client, llm_model=model)
+                    print(f"Aviso: Usando OpenAI para processamento não-OCR, pois MarkItDown não suporta {ai_provider} diretamente.")
+                
+                result = md.convert(temp_path, llm_prompt=format_prompt)
+                return jsonify({"content": result.text_content, "format": format_type, "ai_provider": ai_provider})
+                
+            except ImportError as e:
+                return jsonify({"error": f"Provedor {ai_provider} requer dependências adicionais: {str(e)}"}), 400
+            except Exception as e:
+                return jsonify({"error": f"Erro ao inicializar provedor {ai_provider}: {str(e)}"}), 500
 
         finally:
             # Cleanup temporary file

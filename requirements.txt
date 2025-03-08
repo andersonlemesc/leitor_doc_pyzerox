@@ -4,3 +4,19 @@ markitdown==0.0.1a3
 py-zerox==0.0.7
 python-dotenv==1.0.1
 
+# OpenAI (já incluído nas dependências acima)
+openai>=1.0.0
+
+# Gemini (Google)
+google-generativeai>=0.3.0
+
+# Anthropic (Claude) - opcional
+anthropic>=0.8.0
+
+# Outros provedores - opcionais, comentados por padrão
+# deepseek # Suporte para DeepSeek (ainda não disponível publicamente)
+# grok-ai # Suporte para Grok (ainda não disponível publicamente)
+
+# Llama local - opcional
+# llama-cpp-python>=0.2.0
+
