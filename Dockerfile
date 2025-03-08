@@ -48,13 +48,11 @@ RUN if [ "$INSTALL_LLAMA" = "true" ] && [ "$CUDA_VERSION" != "none" ]; then \
 # Argumentos para instalar bibliotecas específicas de cada provedor
 ARG INSTALL_ANTHROPIC=true
 ARG INSTALL_GEMINI=true
-ARG INSTALL_DEEPSEEK=true
 ARG INSTALL_GROK=false
 
 # Instala bibliotecas adicionais conforme necessário
 RUN if [ "$INSTALL_ANTHROPIC" = "true" ]; then pip install --no-cache-dir anthropic>=0.8.0; fi && \
-    if [ "$INSTALL_GEMINI" = "true" ]; then pip install --no-cache-dir google-generativeai>=0.3.0; fi && \
-    if [ "$INSTALL_DEEPSEEK" = "true" ]; then pip install --no-cache-dir deepseek; fi
+    if [ "$INSTALL_GEMINI" = "true" ]; then pip install --no-cache-dir google-generativeai>=0.3.0; fi
 
 # Copy the rest of the application
 COPY . .

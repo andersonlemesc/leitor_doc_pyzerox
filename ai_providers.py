@@ -33,12 +33,6 @@ except ImportError:
     ANTHROPIC_AVAILABLE = False
 
 try:
-    import deepseek
-    DEEPSEEK_AVAILABLE = True 
-except ImportError:
-    DEEPSEEK_AVAILABLE = False
-
-try:
     # Grok API não está disponível publicamente ainda
     # Por enquanto, marcamos como indisponível
     # import grok_ai
@@ -89,10 +83,6 @@ class AIProvider(ABC):
             if not ANTHROPIC_AVAILABLE:
                 raise ImportError("A biblioteca Anthropic não está instalada. Instale com 'pip install anthropic>=0.8.0'.")
             return AnthropicProvider()
-        elif provider_type == 'deepseek':
-            if not DEEPSEEK_AVAILABLE:
-                raise ImportError("A biblioteca DeepSeek não está instalada. Instale com 'pip install deepseek'.")
-            return DeepSeekProvider()
         elif provider_type == 'grok':
             raise NotImplementedError(
                 "O provedor Grok não está disponível porque a API oficial não está "
@@ -146,33 +136,81 @@ class GeminiProvider(AIProvider):
     """Provedor usando a API do Google Gemini"""
     
     def __init__(self):
-        self.api_key = os.getenv("GEMINI_API_KEY")
-        self.model = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
-        gemini_configure(api_key=self.api_key)
-        self.client = GenerativeModel(self.model)
+        try:
+            self.api_key = os.getenv("GEMINI_API_KEY")
+            if not self.api_key:
+                raise ValueError("GEMINI_API_KEY não está definida no ambiente")
+                
+            self.model = os.getenv("GEMINI_MODEL", "gemini-1.0-pro")  # Usando 1.0-pro como padrão que é mais estável
+            
+            # Configuração mais explícita
+            import google.generativeai as genai
+            genai.configure(api_key=self.api_key)
+            
+            # Verificar modelos disponíveis
+            try:
+                models = genai.list_models()
+                available_models = [m.name for m in models if 'generateContent' in m.supported_generation_methods]
+                print(f"Modelos Gemini disponíveis: {available_models}")
+                
+                if not any(self.model in model for model in available_models):
+                    print(f"Aviso: Modelo {self.model} não encontrado na lista de modelos disponíveis. Usando o primeiro modelo disponível.")
+                    if available_models:
+                        self.model = available_models[0]
+            except Exception as e:
+                print(f"Aviso ao listar modelos: {str(e)}")
+                
+            self.client = genai.GenerativeModel(self.model)
+            print(f"Provedor Gemini inicializado com sucesso usando modelo: {self.model}")
+            
+        except Exception as e:
+            print(f"Erro ao inicializar o provedor Gemini: {str(e)}")
+            raise
     
     def process_document(self, text: str, images: Optional[List[str]] = None, prompt: str = "") -> str:
         """Processa documento usando a API do Google Gemini"""
-        system_prompt = prompt or "Convert this document to markdown format."
-        
-        # Se tiver imagens
-        if images and len(images) > 0:
-            image_parts = []
-            for img_path in images:
-                with open(img_path, "rb") as img_file:
-                    image_parts.append({"mime_type": "image/jpeg", "data": img_file.read()})
+        try:
+            system_prompt = prompt or "Convert this document to markdown format."
             
-            response = self.client.generate_content(
-                [system_prompt, text, *image_parts],
-                generation_config={"temperature": 0.1}
-            )
-        else:
-            response = self.client.generate_content(
-                [system_prompt, text],
-                generation_config={"temperature": 0.1}
-            )
-        
-        return response.text
+            # Se tiver imagens
+            if images and len(images) > 0:
+                try:
+                    import PIL.Image
+                    image_parts = []
+                    for img_path in images:
+                        try:
+                            image = PIL.Image.open(img_path)
+                            image_parts.append(image)
+                        except Exception as e:
+                            print(f"Erro ao processar imagem {img_path}: {str(e)}")
+                    
+                    if image_parts:
+                        response = self.client.generate_content(
+                            [system_prompt, text, *image_parts],
+                            generation_config={"temperature": 0.1}
+                        )
+                    else:
+                        response = self.client.generate_content(
+                            [system_prompt, text],
+                            generation_config={"temperature": 0.1}
+                        )
+                except Exception as e:
+                    print(f"Erro ao processar imagens com Gemini: {str(e)}")
+                    response = self.client.generate_content(
+                        [system_prompt, text],
+                        generation_config={"temperature": 0.1}
+                    )
+            else:
+                response = self.client.generate_content(
+                    [system_prompt, text],
+                    generation_config={"temperature": 0.1}
+                )
+            
+            return response.text
+        except Exception as e:
+            error_msg = f"Erro ao processar documento com Gemini: {str(e)}"
+            print(error_msg)
+            return f"**ERRO DE PROCESSAMENTO**: {error_msg}"
 
 
 class AnthropicProvider(AIProvider):
@@ -224,84 +262,40 @@ class AnthropicProvider(AIProvider):
         return response.content[0].text
 
 
-class DeepSeekProvider(AIProvider):
-    """Provedor usando a API da DeepSeek"""
+class GrokProvider(AIProvider):
+    """Provedor usando a API da Grok (xAI)"""
     
     def __init__(self):
-        self.api_key = os.getenv("DEEPSEEK_API_KEY")
-        self.model = os.getenv("DEEPSEEK_MODEL", "deepseek-vl")
+        self.api_key = os.getenv("GROK_API_KEY")
+        self.model = os.getenv("GROK_MODEL", "grok-2")
         # Importação dinâmica para evitar dependência desnecessária
         try:
-            import deepseek
-            from deepseek import DeepSeekAPIClient
-            self.client = DeepSeekAPIClient(api_key=self.api_key)
+            import grok
+            self.client = grok.Client(api_key=self.api_key)
         except ImportError:
-            raise ImportError("deepseek package não está instalado. Instale com 'pip install deepseek'")
+            raise ImportError("grok-ai package não está instalado. Instale com 'pip install grok-ai'")
     
     def process_document(self, text: str, images: Optional[List[str]] = None, prompt: str = "") -> str:
-        """Processa documento usando a API da DeepSeek"""
+        """Processa documento usando a API da Grok"""
         system_prompt = prompt or "Convert this document to markdown format."
         
-        # Nota: A implementação exata depende da API da DeepSeek, que pode variar
+        # Nota: A implementação exata depende da API da Grok, que pode variar
         # Esta é uma implementação genérica baseada no padrão comum de APIs de IA
         
-        messages = [{"role": "system", "content": system_prompt}]
-        
+        # Grok não suporta imagens (até o momento desta implementação)
         if images and len(images) > 0:
-            import base64
-            image_contents = []
-            
-            for img_path in images:
-                with open(img_path, "rb") as img_file:
-                    img_b64 = base64.b64encode(img_file.read()).decode("utf-8")
-                    image_contents.append({
-                        "type": "image", 
-                        "data": f"data:image/jpeg;base64,{img_b64}"
-                    })
-            
-            messages.append({
-                "role": "user", 
-                "content": [{"type": "text", "data": text}, *image_contents]
-            })
-        else:
-            messages.append({"role": "user", "content": text})
+            print("Aviso: Grok API não suporta processamento de imagens. Ignorando imagens fornecidas.")
         
         response = self.client.chat.completions.create(
             model=self.model,
-            messages=messages,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": text}
+            ],
             temperature=0.1
         )
         
         return response.choices[0].message.content
-
-
-class GrokProvider(AIProvider):
-    """Provedor de IA usando o modelo Grok da xAI"""
-    
-    def __init__(self):
-        """
-        Inicializa o provedor Grok
-        
-        Note:
-            Atualmente, a API oficial do Grok não está disponível publicamente.
-            Esta classe é um placeholder para implementação futura.
-        """
-        raise NotImplementedError(
-            "O provedor Grok ainda não está implementado porque a API oficial não está "
-            "disponível publicamente. Quando a API estiver disponível, esta classe será atualizada."
-        )
-    
-    def process_document(self, text: str, images: Optional[List[str]] = None, prompt: str = "") -> str:
-        """
-        Processa um documento usando o modelo Grok
-        
-        Esta função não está implementada porque a API oficial do Grok 
-        não está disponível publicamente ainda.
-        """
-        raise NotImplementedError(
-            "O provedor Grok ainda não está implementado porque a API oficial não está "
-            "disponível publicamente. Por favor, use outro provedor como OpenAI, Gemini ou Claude."
-        )
 
 
 class LlamaLocalProvider(AIProvider):

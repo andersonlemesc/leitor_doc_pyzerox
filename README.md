@@ -15,43 +15,123 @@ docker run -d -p 5000:5000 andersonlemes/leitor_doc_pyzerox:latest
 
 ### API Usage
 
-Convert a document to Markdown:
+#### Parâmetros de consulta:
+- `ocr` - Ativar/desativar OCR para PDFs (padrão: true)
+- `ai_provider` - Provedor de IA a ser usado: openai, gemini, anthropic, llama_local (padrão: openai)
 
-```bash
-curl -X POST \
-  -H "Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" \
-  --data-binary "@your_document.xlsx" \
-  http://localhost:5000/convert
-```
+#### Provedores e suporte a OCR/imagens:
+- **OpenAI**: Suporta OCR e processamento de imagens (`ocr=true`)
+- **Gemini**: Suporta OCR e processamento de imagens (`ocr=true`)
+- **Anthropic Claude**: Suporta OCR e processamento de imagens (`ocr=true`)
+- **Llama Local**: Suporte limitado, melhor para texto (`ocr=false`)
 
-Especificar o provedor de IA:
+#### Exemplos por tipo de documento:
 
+##### PDF (com OCR - OpenAI, Gemini, Claude)
 ```bash
 curl -X POST \
   -H "Content-Type: application/pdf" \
-  --data-binary "@your_document.pdf" \
+  --data-binary "@seu_documento.pdf" \
+  "http://localhost:5000/convert?ocr=true&ai_provider=openai"
+```
+
+##### Excel
+```bash
+curl -X POST \
+  -H "Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" \
+  --data-binary "@seu_documento.xlsx" \
+  "http://localhost:5000/convert?ai_provider=openai"
+```
+
+##### Word
+```bash
+curl -X POST \
+  -H "Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document" \
+  --data-binary "@seu_documento.docx" \
   "http://localhost:5000/convert?ai_provider=gemini"
+```
+
+##### PowerPoint
+```bash
+curl -X POST \
+  -H "Content-Type: application/vnd.openxmlformats-officedocument.presentationml.presentation" \
+  --data-binary "@sua_apresentacao.pptx" \
+  "http://localhost:5000/convert?ai_provider=anthropic"
+```
+
+##### Imagem (JPEG)
+```bash
+curl -X POST \
+  -H "Content-Type: image/jpeg" \
+  --data-binary "@sua_imagem.jpg" \
+  "http://localhost:5000/convert?ai_provider=openai"
+```
+
+##### Imagem (PNG)
+```bash
+curl -X POST \
+  -H "Content-Type: image/png" \
+  --data-binary "@sua_imagem.png" \
+  "http://localhost:5000/convert?ai_provider=gemini"
+```
+
+##### HTML
+```bash
+curl -X POST \
+  -H "Content-Type: text/html" \
+  --data-binary "@seu_arquivo.html" \
+  "http://localhost:5000/convert?ai_provider=openai"
+```
+
+##### CSV
+```bash
+curl -X POST \
+  -H "Content-Type: text/csv" \
+  --data-binary "@seus_dados.csv" \
+  "http://localhost:5000/convert?ai_provider=openai"
+```
+
+##### JSON
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  --data-binary "@seus_dados.json" \
+  "http://localhost:5000/convert?ai_provider=openai"
+```
+
+##### XML
+```bash
+curl -X POST \
+  -H "Content-Type: application/xml" \
+  --data-binary "@seus_dados.xml" \
+  "http://localhost:5000/convert?ai_provider=openai"
+```
+
+##### ZIP (contendo múltiplos arquivos)
+```bash
+curl -X POST \
+  -H "Content-Type: application/zip" \
+  --data-binary "@seus_arquivos.zip" \
+  "http://localhost:5000/convert?ai_provider=openai"
 ```
 
 ## ✨ Features
 
 - Convert multiples files to Markdown (PDF, PowerPoint, Word, Excel, Images, Audio, HTML, CSV, JSON, XML and ZIP).
-- OCR for PDF files.
+- OCR for PDF files (com OpenAI, Gemini e Claude).
 - Simple REST API interface
 - Docker support
 - Easy deployment with Docker Stack
-- **Novo:** Suporte a múltiplos provedores de IA (OpenAI, Gemini, Claude, DeepSeek, Grok e Llama local)
+- **Novo:** Suporte a múltiplos provedores de IA (OpenAI, Gemini, Claude e Llama local)
 
 ## 🤖 Provedores de IA Suportados
 
 Leitor Doc PyZerox agora suporta vários provedores de IA para processamento OCR e conversão de documentos:
 
-1. **OpenAI (Padrão)** - GPT-4o Mini ou outros modelos da OpenAI
-2. **Google Gemini** - Excelente alternativa com boa relação custo-benefício
-3. **Anthropic Claude** - Excelente para compreensão de documentos e processamento multimodal
-4. **DeepSeek** - Bom desempenho em processamento de documentos
-5. **Grok (xAI)** - Alternativa competitiva
-6. **Llama Local** - Execute modelos localmente para privacidade total
+1. **OpenAI (Padrão)** - GPT-4o Mini ou outros modelos da OpenAI - Suporta OCR e processamento de imagens
+2. **Google Gemini** - Excelente alternativa com boa relação custo-benefício - Suporta OCR e processamento de imagens
+3. **Anthropic Claude** - Excelente para compreensão de documentos e processamento multimodal - Suporta OCR e processamento de imagens
+4. **Llama Local** - Execute modelos localmente para privacidade total - Melhor para processamento de texto
 
 ## 🛠️ Installation
 
@@ -75,16 +155,57 @@ docker run -d -p 5000:5000 andersonlemes/leitor_doc_pyzerox:latest
 
 #### Convert Document
 
-```bash
-curl -X POST \
- -H "Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" \
- --data-binary "@your_document.xlsx" \
- http://localhost:5000/convert?ocr=true/false&ai_provider=openai
+O endpoint principal para conversão de documentos é:
+
+```
+POST /convert
 ```
 
-Parâmetros de consulta:
+Este endpoint aceita vários tipos de documentos e os converte para Markdown.
+
+##### Parâmetros de consulta:
 - `ocr` - Ativar/desativar OCR para PDFs (padrão: true)
-- `ai_provider` - Provedor de IA a ser usado: openai, gemini, anthropic, deepseek, grok, llama_local (padrão: openai)
+  - Use `ocr=true` para OpenAI, Gemini e Claude (suportam processamento de imagens)
+  - Use `ocr=false` para Llama (apenas processamento de texto)
+- `ai_provider` - Provedor de IA a ser usado (padrão: openai)
+  - Valores aceitos: openai, gemini, anthropic, llama_local
+
+##### Tipos de documentos suportados:
+- PDF: `application/pdf`
+- Excel: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+- Word: `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+- PowerPoint: `application/vnd.openxmlformats-officedocument.presentationml.presentation`
+- Imagens: `image/jpeg`, `image/png`, `image/gif`
+- HTML: `text/html`
+- CSV: `text/csv`
+- JSON: `application/json`
+- XML: `application/xml`
+- ZIP: `application/zip`
+- Texto: `text/plain`
+
+##### Exemplo de resposta:
+```json
+{
+  "content": "# Título do Documento\n\nConteúdo convertido em Markdown...",
+  "format": "pdf",
+  "ocr": true,
+  "ai_provider": "openai"
+}
+```
+
+#### Health Check
+
+```
+GET /health
+```
+
+Retorna o status de saúde da API:
+
+```json
+{
+  "status": "healthy"
+}
+```
 
 ## 📦 Deployment
 
@@ -149,48 +270,6 @@ services:
       - "5000:5000"
 ```
 
-#### DeepSeek
-
-```yaml
-version: "3.7"
-services:
-  leitor_doc_pyzerox:
-    image: andersonlemes/leitor_doc_pyzerox:latest
-    build:
-      context: .
-      args:
-        - INSTALL_DEEPSEEK=true
-    environment:
-      - AI_PROVIDER=deepseek
-      - DEEPSEEK_API_KEY=your-deepseek-api-key
-      - DEEPSEEK_MODEL=deepseek-vl
-      - WORKERS=4
-      - TIMEOUT=0
-    ports:
-      - "5000:5000"
-```
-
-#### Grok
-
-```yaml
-version: "3.7"
-services:
-  leitor_doc_pyzerox:
-    image: andersonlemes/leitor_doc_pyzerox:latest
-    build:
-      context: .
-      args:
-        - INSTALL_GROK=true
-    environment:
-      - AI_PROVIDER=grok
-      - GROK_API_KEY=your-grok-api-key
-      - GROK_MODEL=grok-2
-      - WORKERS=4
-      - TIMEOUT=0
-    ports:
-      - "5000:5000"
-```
-
 #### Llama Local
 
 ```yaml
@@ -247,14 +326,12 @@ Os modelos Llama requerem uma GPU para melhor desempenho. Descomente as configur
 
 ## 🧪 Comparação dos Modelos
 
-| Modelo | Desempenho em OCR | Custo | Privacidade | Multimodal | Recomendação |
-|--------|-------------------|-------|------------|------------|--------------|
-| OpenAI GPT-4o Mini | Excelente | Médio | Baixa | Sim | Ótimo desempenho geral |
-| Claude 3 Sonnet | Excelente | Médio | Baixa | Sim | Melhor para documentos complexos |
-| Gemini 1.5 Pro | Muito Bom | Baixo | Baixa | Sim | Melhor custo-benefício |
-| DeepSeek VL | Bom | Baixo | Baixa | Sim | Alternativa econômica |
-| Grok-2 | Bom | Médio | Baixa | Não | Bom para textos |
-| Llama 3 (local) | Razoável | Grátis | Alta | Não | Melhor para privacidade |
+| Modelo | Desempenho em OCR | Processamento de Imagens | Custo | Privacidade | Recomendação |
+|--------|-------------------|-------------------------|-------|------------|--------------|
+| OpenAI GPT-4o Mini | Excelente | Sim | Médio | Baixa | Ótimo desempenho geral |
+| Claude 3 Sonnet | Excelente | Sim | Médio | Baixa | Melhor para documentos complexos |
+| Gemini 1.0 Pro | Muito Bom | Sim | Baixo | Baixa | Melhor custo-benefício |
+| Llama 3 (local) | Razoável | Não | Grátis | Alta | Melhor para privacidade |
 
 ## 🔧 Development
 

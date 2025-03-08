@@ -101,7 +101,7 @@ def convert():
 
     Query Parameters:
         ocr (bool): Whether to use OCR processing for PDFs (default: True)
-        ai_provider (str): AI provider to use (openai, gemini, anthropic, deepseek, grok, llama_local)
+        ai_provider (str): AI provider to use (openai, gemini, anthropic, grok, llama_local)
     """
     try:
         # Get the binary data and content type
@@ -138,11 +138,9 @@ def convert():
             if ai_provider == "openai":
                 model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
             elif ai_provider == "gemini":
-                model = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
+                model = os.getenv("GEMINI_MODEL", "gemini-1.0-pro")  # Usando 1.0-pro como padrão mais estável
             elif ai_provider == "anthropic":
                 model = os.getenv("ANTHROPIC_MODEL", "claude-3-sonnet-20240229")
-            elif ai_provider == "deepseek":
-                model = os.getenv("DEEPSEEK_MODEL", "deepseek-vl")
             elif ai_provider == "grok":
                 model = os.getenv("GROK_MODEL", "grok-2")
             elif ai_provider == "llama_local":
@@ -158,24 +156,61 @@ def convert():
             if format_type == "pdf" and use_ocr:
                 output_dir = os.path.join("uploads", "output")
                 os.makedirs(output_dir, exist_ok=True)
-
-                result = asyncio.run(
-                    zerox(
-                        file_path=temp_path,
-                        model=model,
-                        output_dir=output_dir,
-                        custom_system_prompt=format_prompt,
-                        cleanup=True,
-                        concurrency=3,
-                        ai_provider=ai_provider,  # Pass the AI provider to zerox
+                
+                # Se o provedor for Gemini, use diretamente a classe específica
+                if ai_provider == "gemini":
+                    try:
+                        print(f"Processando PDF com {ai_provider}Provider diretamente")
+                        # Extrair texto do PDF
+                        import PyPDF2
+                        text = ""
+                        with open(temp_path, "rb") as pdf_file:
+                            pdf_reader = PyPDF2.PdfReader(pdf_file)
+                            for page_num in range(len(pdf_reader.pages)):
+                                text += pdf_reader.pages[page_num].extract_text() + "\n\n"
+                        
+                        # Processar com o provedor específico
+                        try:
+                            from ai_providers import GeminiProvider
+                            provider = GeminiProvider()
+                                
+                            content = provider.process_document(text, prompt=format_prompt)
+                            
+                            return jsonify({
+                                "content": content, 
+                                "format": format_type, 
+                                "ocr": True, 
+                                "ai_provider": ai_provider
+                            })
+                        except ImportError as e:
+                            return jsonify({"error": str(e)}), 400
+                    except Exception as e:
+                        print(f"Erro ao processar PDF com {ai_provider}Provider: {str(e)}")
+                        # Continua para o método padrão se falhar
+                
+                # Método padrão usando zerox para outros provedores
+                try:
+                    print(f"Processando PDF com zerox usando provedor: {ai_provider}")
+                    result = asyncio.run(
+                        zerox(
+                            file_path=temp_path,
+                            model=model,
+                            output_dir=output_dir,
+                            custom_system_prompt=format_prompt,
+                            cleanup=True,
+                            concurrency=3,
+                            ai_provider=ai_provider,  # Pass the AI provider to zerox
+                        )
                     )
-                )
 
-                content = ""
-                if hasattr(result, "pages") and result.pages:
-                    content = "\n\n".join(page.content for page in result.pages)
+                    content = ""
+                    if hasattr(result, "pages") and result.pages:
+                        content = "\n\n".join(page.content for page in result.pages)
 
-                return jsonify({"content": content, "format": format_type, "ocr": True, "ai_provider": ai_provider})
+                    return jsonify({"content": content, "format": format_type, "ocr": True, "ai_provider": ai_provider})
+                except Exception as e:
+                    print(f"Erro ao processar PDF com zerox: {str(e)}")
+                    return jsonify({"error": f"Erro ao processar PDF: {str(e)}"}), 500
 
             # Process other formats using MarkItDown
             # Inicializar o provedor de IA correto
