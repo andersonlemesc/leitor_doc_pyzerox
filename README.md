@@ -141,7 +141,6 @@ Leitor Doc PyZerox agora suporta vários provedores de IA para processamento OCR
 
 ```bash
 docker pull andersonlemes/leitor_doc_pyzerox:latest
-utilize andersonlemes/leitor_doc_pyzerox:arm64 para Arm64
 
 ```
 2. Pull the image Arm64:
