@@ -141,6 +141,8 @@ Leitor Doc PyZerox agora suporta vários provedores de IA para processamento OCR
 
 ```bash
 docker pull andersonlemes/leitor_doc_pyzerox:latest
+utilize andersonlemes/leitor_doc_pyzerox:arm64 para Arm64
+
 ```
 
 2. Run the container:
@@ -330,7 +332,7 @@ Os modelos Llama requerem uma GPU para melhor desempenho. Descomente as configur
 |--------|-------------------|-------------------------|-------|------------|--------------|
 | OpenAI GPT-4o Mini | Excelente | Sim | Médio | Baixa | Ótimo desempenho geral |
 | Claude 3 Sonnet | Excelente | Sim | Médio | Baixa | Melhor para documentos complexos |
-| Gemini 1.0 Pro | Muito Bom | Sim | Baixo | Baixa | Melhor custo-benefício |
+| Gemini 1.5 Pro | Muito Bom | Sim | Baixo | Baixa | Melhor custo-benefício |
 | Llama 3 (local) | Razoável | Não | Grátis | Alta | Melhor para privacidade |
 
 ## 🔧 Development
