@@ -144,8 +144,14 @@ docker pull andersonlemes/leitor_doc_pyzerox:latest
 utilize andersonlemes/leitor_doc_pyzerox:arm64 para Arm64
 
 ```
+2. Pull the image Arm64:
 
-2. Run the container:
+```bash
+docker pull andersonlemes/leitor_doc_pyzerox:arm64
+
+```
+
+3. Run the container:
 
 ```bash
 docker run -d -p 5000:5000 andersonlemes/leitor_doc_pyzerox:latest
