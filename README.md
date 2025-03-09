@@ -340,6 +340,56 @@ Os modelos Llama requerem uma GPU para melhor desempenho. Descomente as configur
 3. Run tests
 4. Submit pull requests
 
+## 🏗️ Construindo para diferentes arquiteturas
+
+### Construindo para ARM64 (Ampere)
+
+Este projeto inclui um Dockerfile específico para arquitetura ARM64 (Ampere), permitindo que você execute o serviço em servidores baseados em ARM como AWS Graviton, Ampere Altra, etc.
+
+Para construir a imagem para ARM64:
+
+```bash
+# Construir a imagem para ARM64
+docker build -f Dockerfile.arm64 -t andersonlemes/leitor_doc_pyzerox:arm64 .
+
+# Enviar para o Docker Hub (opcional)
+docker push andersonlemes/leitor_doc_pyzerox:arm64
+```
+
+Para executar em um servidor ARM64:
+
+```bash
+# Usando Docker Compose
+version: "3.7"
+services:
+  leitor_doc_pyzerox:
+    image: andersonlemes/leitor_doc_pyzerox:arm64
+    environment:
+      - AI_PROVIDER=openai
+      - OPENAI_API_KEY=sua-chave-api-openai
+      - OPENAI_MODEL=gpt-4o-mini
+      - WORKERS=4
+      - TIMEOUT=0
+    ports:
+      - "5000:5000"
+```
+
+### Construção multi-arquitetura (x86_64 e ARM64)
+
+Para criar uma única imagem que funcione em ambas as arquiteturas:
+
+```bash
+# Configurar o buildx
+docker buildx create --name mybuilder --use
+
+# Construir e enviar para ambas as arquiteturas
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -t andersonlemes/leitor_doc_pyzerox:multi-arch \
+  --push .
+```
+
+Isso criará uma imagem que funcionará automaticamente na arquitetura correta, seja x86_64 ou ARM64.
+
 ## 📝 License
 
 [MIT License](https://opensource.org/licenses/MIT)
